@@ -1,0 +1,43 @@
+[package]
+name = "mithril-checkpoint"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Checkpoint compression for PyTorch models"
+
+[[bin]]
+name = "mithril-checkpoint"
+path = "src/main.rs"
+
+[features]
+default = []
+onnx = ["prost"]
+
+[dependencies]
+mithril-core = { workspace = true }
+bytes = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+zstd = { workspace = true }
+rayon = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+clap = { workspace = true }
+clap_complete = { workspace = true }
+indicatif = { workspace = true }
+console = { workspace = true }
+rmp-serde = { workspace = true }
+bincode = "1"
+prost = { version = "0.13", optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+rand = { workspace = true }
+criterion = { workspace = true }
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
+
+[[bench]]
+name = "checkpoint_bench"
+harness = false

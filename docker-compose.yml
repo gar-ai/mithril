@@ -1,0 +1,78 @@
+# Mithril Local Development Environment
+#
+# Provides S3 (MinIO) and GCS (fake-gcs-server) emulators for testing cloud storage.
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose up -d minio        # Start only MinIO
+#   docker-compose up -d fake-gcs     # Start only fake-gcs-server
+#   docker-compose down               # Stop all services
+#
+# Testing:
+#   # S3/MinIO tests
+#   AWS_ACCESS_KEY_ID=mithril \
+#   AWS_SECRET_ACCESS_KEY=mithril123 \
+#   AWS_ENDPOINT_URL=http://localhost:9000 \
+#   cargo test --features s3 -p mithril-core -- --ignored
+#
+#   # GCS tests
+#   STORAGE_EMULATOR_HOST=http://localhost:4443 \
+#   cargo test --features gcs -p mithril-core -- --ignored
+
+version: '3.8'
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: mithril-minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    environment:
+      MINIO_ROOT_USER: mithril
+      MINIO_ROOT_PASSWORD: mithril123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: mithril-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 mithril mithril123;
+      mc mb myminio/test-bucket --ignore-existing;
+      mc mb myminio/mithril-cache --ignore-existing;
+      mc mb myminio/mithril-checkpoints --ignore-existing;
+      echo 'MinIO buckets created';
+      "
+
+  fake-gcs:
+    image: fsouza/fake-gcs-server:latest
+    container_name: mithril-fake-gcs
+    ports:
+      - "4443:4443"
+    command:
+      - "-scheme"
+      - "http"
+      - "-port"
+      - "4443"
+      - "-backend"
+      - "memory"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4443/storage/v1/b"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  minio-data:
+    driver: local

@@ -1,0 +1,27 @@
+[package]
+name = "mithril-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Python bindings for Mithril"
+
+[lib]
+name = "_mithril"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+s3 = ["mithril-cache/s3", "mithril-core/s3"]
+gcs = ["mithril-cache/gcs", "mithril-core/gcs"]
+remote = ["s3", "gcs"]
+
+[dependencies]
+mithril-core = { workspace = true }
+mithril-checkpoint = { workspace = true }
+mithril-dedup = { workspace = true }
+mithril-cache = { workspace = true }
+pyo3 = { workspace = true }
+tokio = { workspace = true }
+bytes = { workspace = true }
+serde_json = { workspace = true }

@@ -1,0 +1,36 @@
+[package]
+name = "mithril-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Core infrastructure for Mithril ML tools"
+
+[features]
+default = []
+s3 = ["dep:rust-s3"]
+gcs = ["dep:cloud-storage", "dep:futures"]
+cloud = ["s3", "gcs"]
+
+[dependencies]
+tokio = { workspace = true }
+bytes = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+zstd = { workspace = true }
+lz4_flex = { workspace = true }
+xxhash-rust = { workspace = true }
+blake3 = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# Cloud storage (optional)
+rust-s3 = { workspace = true, optional = true }
+cloud-storage = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+rand = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros"] }

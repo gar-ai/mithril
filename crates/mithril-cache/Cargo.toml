@@ -1,0 +1,34 @@
+[package]
+name = "mithril-cache"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Compilation caching for torch.compile"
+
+[features]
+default = []
+s3 = ["mithril-core/s3"]
+gcs = ["mithril-core/gcs"]
+remote = ["s3", "gcs"]
+
+[dependencies]
+mithril-core = { workspace = true }
+bytes = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+blake3 = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+dirs = { workspace = true }
+walkdir = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+criterion = { workspace = true, features = ["async_tokio"] }
+
+[[bench]]
+name = "cache_bench"
+harness = false

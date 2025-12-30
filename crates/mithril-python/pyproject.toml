@@ -1,0 +1,95 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "mithril"
+version = "0.1.0"
+description = "High-performance ML infrastructure toolkit for checkpoint compression, dataset deduplication, and compilation caching"
+readme = "../../README.md"
+license = { text = "MIT OR Apache-2.0" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Mithril Contributors" }
+]
+maintainers = [
+    { name = "Mithril Contributors" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Archiving :: Compression",
+    "Typing :: Typed",
+]
+keywords = [
+    "ml",
+    "machine-learning",
+    "pytorch",
+    "compression",
+    "deduplication",
+    "checkpoint",
+    "torch-compile",
+    "safetensors",
+    "training",
+]
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/mithril"
+Documentation = "https://github.com/your-org/mithril#readme"
+Repository = "https://github.com/your-org/mithril"
+Issues = "https://github.com/your-org/mithril/issues"
+Changelog = "https://github.com/your-org/mithril/blob/main/CHANGELOG.md"
+
+[project.scripts]
+mithril = "mithril.cli:main"
+
+[project.optional-dependencies]
+torch = ["torch>=2.0"]
+s3 = []  # S3 support built into binary
+gcs = []  # GCS support built into binary
+remote = []  # Remote cache support
+all = ["torch>=2.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "torch>=2.0",
+]
+
+[tool.maturin]
+python-source = "python"
+module-name = "mithril._mithril"
+features = ["pyo3/extension-module"]
+strip = true
+compatibility = "manylinux2014"
+
+# Build with S3 support by default
+# To build with all cloud features: maturin build --features remote
+[tool.maturin.target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-s"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "../../tests/integration"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow",
+    "gpu: marks tests that require GPU",
+]
