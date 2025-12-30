@@ -880,7 +880,7 @@ pub fn is_onnx<P: AsRef<Path>>(path: P) -> Result<bool> {
     let field_number = first_byte >> 3;
 
     // Valid first fields for ModelProto: 1-8
-    Ok(wire_type <= 2 && field_number >= 1 && field_number <= 8)
+    Ok(wire_type <= 2 && (1..=8).contains(&field_number))
 }
 
 #[cfg(test)]

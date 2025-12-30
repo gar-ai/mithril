@@ -258,9 +258,10 @@ impl InputSpec {
 ///
 /// This is more coarse-grained than specific GPU models, enabling
 /// cache sharing across GPUs with the same compute capability.
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum DeviceClass {
     /// Matches any CUDA device.
+    #[default]
     CudaAny,
     /// Matches a specific CUDA compute capability.
     CudaCompute {
@@ -350,11 +351,6 @@ impl DeviceClass {
     }
 }
 
-impl Default for DeviceClass {
-    fn default() -> Self {
-        Self::CudaAny
-    }
-}
 
 /// Software version for cache compatibility checking.
 ///
@@ -424,7 +420,7 @@ impl std::fmt::Display for Version {
 }
 
 /// Software environment versions for cache compatibility.
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct EnvironmentVersions {
     /// PyTorch version.
     pub torch: Option<Version>,
@@ -514,15 +510,6 @@ impl EnvironmentVersions {
     }
 }
 
-impl Default for EnvironmentVersions {
-    fn default() -> Self {
-        Self {
-            torch: None,
-            cuda: None,
-            triton: None,
-        }
-    }
-}
 
 /// Extended cache key including version information.
 ///
@@ -638,9 +625,9 @@ fn normalize_line(line: &str) -> String {
     let mut in_string = false;
     let mut string_char = '"';
     let mut current_string = String::new();
-    let mut chars = line.chars().peekable();
+    let chars = line.chars();
 
-    while let Some(c) = chars.next() {
+    for c in chars {
         if !in_string {
             if c == '"' || c == '\'' {
                 in_string = true;

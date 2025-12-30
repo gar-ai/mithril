@@ -163,7 +163,7 @@ impl SglangCacheManager {
         for dir in [self.attention_dir(), self.sampling_dir()] {
             if dir.exists() {
                 for entry in std::fs::read_dir(&dir)? {
-                    if entry?.path().extension().map_or(false, |e| e == "hash") {
+                    if entry?.path().extension().is_some_and(|e| e == "hash") {
                         stats.kernels_loaded += 1;
                     }
                 }
@@ -177,14 +177,14 @@ impl SglangCacheManager {
         let mut stats = SglangCacheStats::default();
         if self.attention_dir().exists() {
             for entry in std::fs::read_dir(self.attention_dir())? {
-                if entry?.path().extension().map_or(false, |e| e == "hash") {
+                if entry?.path().extension().is_some_and(|e| e == "hash") {
                     stats.attention_kernel_count += 1;
                 }
             }
         }
         if self.sampling_dir().exists() {
             for entry in std::fs::read_dir(self.sampling_dir())? {
-                if entry?.path().extension().map_or(false, |e| e == "hash") {
+                if entry?.path().extension().is_some_and(|e| e == "hash") {
                     stats.sampling_kernel_count += 1;
                 }
             }

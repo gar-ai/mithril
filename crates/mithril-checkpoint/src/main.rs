@@ -12,7 +12,7 @@ use rayon::prelude::*;
 use serde::Serialize;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
@@ -304,7 +304,7 @@ fn create_spinner(msg: &str) -> ProgressBar {
 }
 
 /// Detect the input format from file extension.
-fn detect_format(path: &PathBuf, explicit: Format) -> Result<Format, String> {
+fn detect_format(path: &Path, explicit: Format) -> Result<Format, String> {
     match explicit {
         Format::Auto => {
             let ext = path

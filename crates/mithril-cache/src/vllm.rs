@@ -128,7 +128,7 @@ impl VllmCacheManager {
         let mut stats = WarmupStats::default();
         if self.kernels_dir().exists() {
             for entry in std::fs::read_dir(self.kernels_dir())? {
-                if entry?.path().extension().map_or(false, |e| e == "hash") {
+                if entry?.path().extension().is_some_and(|e| e == "hash") {
                     stats.kernels_loaded += 1;
                 }
             }
@@ -141,7 +141,7 @@ impl VllmCacheManager {
         let mut stats = VllmCacheStats::default();
         if self.kernels_dir().exists() {
             for entry in std::fs::read_dir(self.kernels_dir())? {
-                if entry?.path().extension().map_or(false, |e| e == "hash") {
+                if entry?.path().extension().is_some_and(|e| e == "hash") {
                     stats.kernel_count += 1;
                 }
             }

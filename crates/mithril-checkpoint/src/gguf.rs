@@ -370,7 +370,7 @@ impl GgufTensorInfo {
 
         if self.dtype.is_quantized() {
             // For quantized types: (num_elements / block_size) * type_size
-            let num_blocks = (num_elements + block_size - 1) / block_size;
+            let num_blocks = num_elements.div_ceil(block_size);
             (num_blocks * type_size) as usize
         } else {
             // For non-quantized types: num_elements * type_size
@@ -403,7 +403,7 @@ impl GgufReader {
         }
 
         let version = Self::read_u32(&mut reader)?;
-        if version < 2 || version > 3 {
+        if !(2..=3).contains(&version) {
             return Err(MithrilError::InvalidFormat(format!(
                 "Unsupported GGUF version: {}",
                 version
@@ -432,7 +432,7 @@ impl GgufReader {
         let alignment = metadata
             .get_u64("general.alignment")
             .unwrap_or(GGUF_DEFAULT_ALIGNMENT as u64) as usize;
-        let data_offset = ((current_pos + alignment - 1) / alignment) * alignment;
+        let data_offset = current_pos.div_ceil(alignment) * alignment;
 
         Ok(Self {
             file: reader,
@@ -769,7 +769,7 @@ impl GgufWriter {
         }
 
         let alignment = GGUF_DEFAULT_ALIGNMENT;
-        let data_start = ((header_end + tensor_info_size + alignment - 1) / alignment) * alignment;
+        let data_start = (header_end + tensor_info_size).div_ceil(alignment) * alignment;
 
         // Write tensor infos with calculated offsets
         let mut current_offset: u64 = 0;
@@ -778,7 +778,7 @@ impl GgufWriter {
         for tensor in &self.tensors {
             // Align offset
             let aligned_offset =
-                ((current_offset as usize + alignment - 1) / alignment) * alignment;
+                (current_offset as usize).div_ceil(alignment) * alignment;
             tensor_offsets.push(aligned_offset as u64);
 
             Self::write_string(&mut writer, &tensor.name)?;

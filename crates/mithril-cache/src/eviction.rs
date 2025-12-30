@@ -259,11 +259,7 @@ impl LruCache {
 
         // If the single entry is bigger than max, we still add it
         // but evict everything else first
-        let target = if needed_bytes > self.max_size_bytes {
-            0
-        } else {
-            self.max_size_bytes - needed_bytes
-        };
+        let target = self.max_size_bytes.saturating_sub(needed_bytes);
 
         while self.current_size > target {
             if let Some(key) = self.tail.clone() {

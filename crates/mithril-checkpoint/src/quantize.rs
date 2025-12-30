@@ -235,6 +235,7 @@ impl QuantizedTensor {
 /// NF4 quantization levels.
 /// These are the 16 values that approximate a normal distribution.
 /// From the QLoRA paper: https://arxiv.org/abs/2305.14314
+#[allow(clippy::excessive_precision)]
 const NF4_LEVELS: [f32; 16] = [
     -1.0,
     -0.6961928009986877,
@@ -489,7 +490,7 @@ impl Quantizer {
         let group_size = self
             .config
             .group_size
-            .ok_or_else(|| QuantizeError::GroupSizeRequired(QuantizeMethod::NF4))?;
+            .ok_or(QuantizeError::GroupSizeRequired(QuantizeMethod::NF4))?;
 
         if !values.is_empty() && values.len() % group_size != 0 {
             return Err(QuantizeError::InvalidGroupSize {
@@ -539,7 +540,7 @@ impl Quantizer {
         }
 
         // Pack nibbles into bytes (2 values per byte)
-        let mut packed_data = Vec::with_capacity((quantized_nibbles.len() + 1) / 2);
+        let mut packed_data = Vec::with_capacity(quantized_nibbles.len().div_ceil(2));
         for chunk in quantized_nibbles.chunks(2) {
             let low = chunk[0];
             let high = if chunk.len() > 1 { chunk[1] } else { 0 };
@@ -597,10 +598,7 @@ impl Quantizer {
         // Quantize values to 4-bit
         let mut quantized_nibbles: Vec<u8> = values
             .iter()
-            .map(|&v| {
-                let q = ((v - min_val) / scale).round().clamp(0.0, 15.0) as u8;
-                q
-            })
+            .map(|&v| ((v - min_val) / scale).round().clamp(0.0, 15.0) as u8)
             .collect();
 
         // Pad to even length

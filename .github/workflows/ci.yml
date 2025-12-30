@@ -65,14 +65,20 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python -m venv .venv
+          source .venv/bin/activate
           pip install maturin pytest pytest-asyncio torch numpy
 
       - name: Build and install mithril
         working-directory: crates/mithril-python
-        run: maturin develop --release
+        run: |
+          source ../../.venv/bin/activate
+          maturin develop --release
 
       - name: Run tests (excluding slow tests)
-        run: pytest tests/integration/ -v -m "not slow" --ignore=tests/integration/test_huggingface_models.py --ignore=tests/integration/test_s3_storage.py
+        run: |
+          source .venv/bin/activate
+          pytest tests/integration/ -v -m "not slow" --ignore=tests/integration/test_huggingface_models.py --ignore=tests/integration/test_s3_storage.py
 
   benchmarks:
     name: Benchmarks
@@ -85,4 +91,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run benchmarks
-        run: cargo bench --workspace --exclude mithril-python -- --noplot
+        run: cargo bench --workspace --exclude mithril-python

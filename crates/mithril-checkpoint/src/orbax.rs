@@ -434,32 +434,31 @@ impl OrbaxReader {
         let data = fs::read(path)?;
 
         // Try to decode as msgpack
-        if let Ok(value) = rmp_serde::from_slice::<serde_json::Value>(&data) {
-            if let serde_json::Value::Object(map) = value {
-                let shape = map
-                    .get("shape")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_u64().map(|n| n as usize))
-                            .collect()
-                    })
-                    .unwrap_or_default();
+        if let Ok(serde_json::Value::Object(map)) = rmp_serde::from_slice::<serde_json::Value>(&data)
+        {
+            let shape = map
+                .get("shape")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_u64().map(|n| n as usize))
+                        .collect()
+                })
+                .unwrap_or_default();
 
-                let dtype = map
-                    .get("dtype")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown")
-                    .to_string();
+            let dtype = map
+                .get("dtype")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
 
-                return Ok(ArrayInfo {
-                    shape,
-                    dtype,
-                    path: Some(path.file_name().unwrap().to_string_lossy().to_string()),
-                    offset: 0,
-                    nbytes: data.len(),
-                });
-            }
+            return Ok(ArrayInfo {
+                shape,
+                dtype,
+                path: Some(path.file_name().unwrap().to_string_lossy().to_string()),
+                offset: 0,
+                nbytes: data.len(),
+            });
         }
 
         Err(MithrilError::InvalidFormat(
@@ -788,9 +787,7 @@ impl OrbaxWriter {
         header.extend_from_slice(header_dict.as_bytes());
 
         // Padding (spaces)
-        for _ in 0..padding {
-            header.push(b' ');
-        }
+        header.extend(std::iter::repeat(b' ').take(padding));
 
         // Terminating newline
         header.push(b'\n');
@@ -885,12 +882,10 @@ impl OrbaxWriter {
         meta.insert("arrays".to_string(), serde_json::Value::Object(arrays_info));
 
         // Merge with custom metadata if provided
-        if let Some(ref custom) = self.metadata {
-            if let serde_json::Value::Object(custom_map) = custom {
-                for (k, v) in custom_map {
-                    if k != "version" && k != "arrays" {
-                        meta.insert(k.clone(), v.clone());
-                    }
+        if let Some(serde_json::Value::Object(ref custom_map)) = self.metadata {
+            for (k, v) in custom_map {
+                if k != "version" && k != "arrays" {
+                    meta.insert(k.clone(), v.clone());
                 }
             }
         }

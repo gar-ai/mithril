@@ -240,6 +240,7 @@ impl ContentStore {
     }
 
     /// Recursively compute total size.
+    #[allow(clippy::only_used_in_recursion)]
     fn total_size_recursive(
         &self,
         dir: &Path,
@@ -263,7 +264,7 @@ impl ContentStore {
                 } else if file_type.is_file() {
                     let name = path.file_name().map(|n| n.to_string_lossy());
                     // Skip temp files
-                    if !name.map_or(false, |n| n.ends_with(".tmp")) {
+                    if !name.is_some_and(|n| n.ends_with(".tmp")) {
                         let meta = entry.metadata().await?;
                         total += meta.len();
                     }
