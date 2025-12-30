@@ -777,8 +777,7 @@ impl GgufWriter {
 
         for tensor in &self.tensors {
             // Align offset
-            let aligned_offset =
-                (current_offset as usize).div_ceil(alignment) * alignment;
+            let aligned_offset = (current_offset as usize).div_ceil(alignment) * alignment;
             tensor_offsets.push(aligned_offset as u64);
 
             Self::write_string(&mut writer, &tensor.name)?;

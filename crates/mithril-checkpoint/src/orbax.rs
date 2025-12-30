@@ -434,7 +434,8 @@ impl OrbaxReader {
         let data = fs::read(path)?;
 
         // Try to decode as msgpack
-        if let Ok(serde_json::Value::Object(map)) = rmp_serde::from_slice::<serde_json::Value>(&data)
+        if let Ok(serde_json::Value::Object(map)) =
+            rmp_serde::from_slice::<serde_json::Value>(&data)
         {
             let shape = map
                 .get("shape")

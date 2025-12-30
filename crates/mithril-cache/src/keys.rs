@@ -351,7 +351,6 @@ impl DeviceClass {
     }
 }
 
-
 /// Software version for cache compatibility checking.
 ///
 /// Only major and minor versions are used for compatibility,
@@ -509,7 +508,6 @@ impl EnvironmentVersions {
         bytes
     }
 }
-
 
 /// Extended cache key including version information.
 ///
