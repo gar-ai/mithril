@@ -35,3 +35,6 @@ Thumbs.db
 
 # Claude development files
 .claude/
+
+# Reference docs (not part of the project)
+high-performance-rust-guide.md

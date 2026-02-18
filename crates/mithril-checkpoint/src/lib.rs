@@ -34,6 +34,7 @@
 //! - [`bytegroup`] - Byte grouping transforms for floating-point data
 //! - [`delta`] - Delta encoding for consecutive checkpoints
 //! - [`pipeline`] - Main compression pipeline
+//! - [`streaming`] - Streaming/chunked compression for large models
 //! - [`formats`] - Checkpoint format readers (safetensors, etc.)
 //!
 //! ## Status: FUNCTIONAL
@@ -49,6 +50,7 @@ pub mod onnx;
 pub mod orbax;
 pub mod pipeline;
 pub mod quantize;
+pub mod streaming;
 
 // Re-export main types
 pub use compressed_safetensors::{CompressedSafetensors, MstHeader, MstReader, MstWriter};
@@ -69,3 +71,4 @@ pub use pipeline::{CheckpointCompressor, CompressionConfig, CompressionStats};
 pub use quantize::{
     QuantizeConfig, QuantizeError, QuantizeMethod, QuantizeStats, QuantizedTensor, Quantizer,
 };
+pub use streaming::{StreamingCompressor, StreamingWriter};

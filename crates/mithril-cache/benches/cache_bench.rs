@@ -1,6 +1,4 @@
-use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
-};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use mithril_cache::cas::ContentStore;
 use mithril_cache::eviction::{CacheEntry, LruCache};
 use mithril_cache::hooks::{CacheConfig, CacheManager};
@@ -52,10 +50,7 @@ fn bench_cache_key_generation(c: &mut Criterion) {
             CacheKey::from_bytes(
                 black_box(&large_graph),
                 black_box(inputs.clone()),
-                black_box(DeviceClass::CudaCompute {
-                    major: 8,
-                    minor: 0,
-                }),
+                black_box(DeviceClass::CudaCompute { major: 8, minor: 0 }),
             )
         })
     });
@@ -192,7 +187,7 @@ fn bench_lru_mixed_workload(c: &mut Criterion) {
     group.bench_function("80_hit_20_miss_1000ops", |b| {
         b.iter(|| {
             let mut cache = LruCache::new(512 * 1024); // 512KB
-            // Pre-populate with 100 "warm" entries
+                                                       // Pre-populate with 100 "warm" entries
             for i in 0..100 {
                 cache.put(CacheEntry::new(format!("warm_{i}"), 1024));
             }
@@ -201,8 +196,7 @@ fn bench_lru_mixed_workload(c: &mut Criterion) {
             for i in 0..1000 {
                 if i % 5 == 0 {
                     // 20% miss -> insert new entry
-                    let evicted =
-                        cache.put(CacheEntry::new(format!("new_{i}"), 2048));
+                    let evicted = cache.put(CacheEntry::new(format!("new_{i}"), 2048));
                     evicted_total += evicted.len();
                 } else {
                     // 80% hit -> access existing entry
@@ -218,7 +212,7 @@ fn bench_lru_mixed_workload(c: &mut Criterion) {
     group.bench_function("hot_set_reuse_1000ops", |b| {
         b.iter(|| {
             let mut cache = LruCache::new(1024 * 1024); // 1MB
-            // Insert 200 entries
+                                                        // Insert 200 entries
             for i in 0..200 {
                 cache.put(CacheEntry::new(format!("kern_{i}"), 4096));
             }
@@ -452,8 +446,7 @@ fn bench_cache_manager(c: &mut Criterion) {
     group.bench_function("eviction_on_record_entry", |b| {
         b.iter(|| {
             let tmp = TempDir::new().unwrap();
-            let config = CacheConfig::new(tmp.path())
-                .with_max_size_bytes(50 * 1024); // 50KB limit
+            let config = CacheConfig::new(tmp.path()).with_max_size_bytes(50 * 1024); // 50KB limit
             let mut manager = CacheManager::init(config).unwrap();
 
             let mut total_evicted = 0usize;
