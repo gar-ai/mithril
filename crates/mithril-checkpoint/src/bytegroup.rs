@@ -38,15 +38,13 @@ pub fn byte_group_bf16(data: &[u8]) -> Vec<u8> {
     );
 
     let n = data.len() / 2;
-    let mut grouped = Vec::with_capacity(data.len());
+    let mut grouped = vec![0u8; data.len()];
+    let (high, low) = grouped.split_at_mut(n);
 
-    // High bytes first (index 0, 2, 4, ...)
-    for i in 0..n {
-        grouped.push(data[i * 2]);
-    }
-    // Low bytes second (index 1, 3, 5, ...)
-    for i in 0..n {
-        grouped.push(data[i * 2 + 1]);
+    // chunks_exact gives the compiler stride info for auto-vectorization
+    for (i, chunk) in data.chunks_exact(2).enumerate() {
+        high[i] = chunk[0];
+        low[i] = chunk[1];
     }
 
     grouped
@@ -75,12 +73,12 @@ pub fn byte_ungroup_bf16(data: &[u8]) -> Vec<u8> {
     );
 
     let n = data.len() / 2;
-    let mut ungrouped = Vec::with_capacity(data.len());
+    let mut ungrouped = vec![0u8; data.len()];
 
-    // Interleave high and low bytes
-    for i in 0..n {
-        ungrouped.push(data[i]); // high byte
-        ungrouped.push(data[n + i]); // low byte
+    // chunks_exact on output gives the compiler stride info for auto-vectorization
+    for (i, chunk) in ungrouped.chunks_exact_mut(2).enumerate() {
+        chunk[0] = data[i]; // high byte
+        chunk[1] = data[n + i]; // low byte
     }
 
     ungrouped
@@ -100,13 +98,14 @@ pub fn byte_group_fp32(data: &[u8]) -> Vec<u8> {
     );
 
     let n = data.len() / 4;
-    let mut grouped = Vec::with_capacity(data.len());
+    let mut grouped = vec![0u8; data.len()];
 
-    // Group by byte position
-    for byte_pos in 0..4 {
-        for i in 0..n {
-            grouped.push(data[i * 4 + byte_pos]);
-        }
+    // chunks_exact gives the compiler stride info for auto-vectorization
+    for (i, chunk) in data.chunks_exact(4).enumerate() {
+        grouped[i] = chunk[0];
+        grouped[n + i] = chunk[1];
+        grouped[2 * n + i] = chunk[2];
+        grouped[3 * n + i] = chunk[3];
     }
 
     grouped
@@ -124,12 +123,14 @@ pub fn byte_ungroup_fp32(data: &[u8]) -> Vec<u8> {
     );
 
     let n = data.len() / 4;
-    let mut ungrouped = Vec::with_capacity(data.len());
+    let mut ungrouped = vec![0u8; data.len()];
 
-    for i in 0..n {
-        for byte_pos in 0..4 {
-            ungrouped.push(data[byte_pos * n + i]);
-        }
+    // chunks_exact on output gives the compiler stride info for auto-vectorization
+    for (i, chunk) in ungrouped.chunks_exact_mut(4).enumerate() {
+        chunk[0] = data[i]; // byte 0 from section 0
+        chunk[1] = data[n + i]; // byte 1 from section 1
+        chunk[2] = data[2 * n + i]; // byte 2 from section 2
+        chunk[3] = data[3 * n + i]; // byte 3 from section 3
     }
 
     ungrouped
@@ -533,5 +534,20 @@ mod tests {
         let auto_result = byte_group_bf16_auto(&large_data);
         let par_result = byte_group_bf16_par(&large_data);
         assert_eq!(auto_result, par_result);
+    }
+
+    #[test]
+    fn test_bf16_grouping_uses_prealloc() {
+        // Verify the optimization: grouped output should be the same regardless of implementation
+        let data: Vec<u8> = (0..20000u16).flat_map(|x| x.to_le_bytes()).collect();
+        let grouped = byte_group_bf16(&data);
+        let ungrouped = byte_ungroup_bf16(&grouped);
+        assert_eq!(data, ungrouped);
+
+        // Also verify fp32
+        let data32: Vec<u8> = (0..10000u32).flat_map(|x| x.to_le_bytes()).collect();
+        let grouped32 = byte_group_fp32(&data32);
+        let ungrouped32 = byte_ungroup_fp32(&grouped32);
+        assert_eq!(data32, ungrouped32);
     }
 }

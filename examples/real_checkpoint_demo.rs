@@ -98,10 +98,7 @@ fn main() {
     );
     println!();
 
-    println!(
-        "  {0:─<22}┬{0:─<11}┬{0:─<12}┬{0:─<9}┬{0:─<8}┬{0:─<10}",
-        ""
-    );
+    println!("  {0:─<22}┬{0:─<11}┬{0:─<12}┬{0:─<9}┬{0:─<8}┬{0:─<10}", "");
     println!(
         "  {:>22}│{:>11}│{:>12}│{:>9}│{:>8}│{:>10}",
         style("Model").bold(),
@@ -111,10 +108,7 @@ fn main() {
         style("DType").bold(),
         style("Speed").bold(),
     );
-    println!(
-        "  {0:─<22}┼{0:─<11}┼{0:─<12}┼{0:─<9}┼{0:─<8}┼{0:─<10}",
-        ""
-    );
+    println!("  {0:─<22}┼{0:─<11}┼{0:─<12}┼{0:─<9}┼{0:─<8}┼{0:─<10}", "");
 
     let mut model_data: Vec<(String, Vec<u8>, DType)> = Vec::new();
 
@@ -133,12 +127,7 @@ fn main() {
         let mut reader = match SafetensorsReader::open(&path) {
             Ok(r) => r,
             Err(e) => {
-                println!(
-                    "  {:>22}│ {} ({})",
-                    m.name,
-                    style("error").red(),
-                    e
-                );
+                println!("  {:>22}│ {} ({})", m.name, style("error").red(), e);
                 continue;
             }
         };
@@ -156,12 +145,7 @@ fn main() {
         let raw_data = match reader.read_all_data() {
             Ok(d) => d,
             Err(e) => {
-                println!(
-                    "  {:>22}│ {} ({})",
-                    m.name,
-                    style("error").red(),
-                    e
-                );
+                println!("  {:>22}│ {} ({})", m.name, style("error").red(), e);
                 continue;
             }
         };
@@ -175,8 +159,7 @@ fn main() {
 
         let compressed_size = compressed.len();
         let ratio = raw_size as f64 / compressed_size as f64;
-        let speed_gibs =
-            (raw_size as f64 / (1024.0 * 1024.0 * 1024.0)) / elapsed.as_secs_f64();
+        let speed_gibs = (raw_size as f64 / (1024.0 * 1024.0 * 1024.0)) / elapsed.as_secs_f64();
 
         let dtype_str = format!("{:?}", dominant_dtype);
 
@@ -194,19 +177,12 @@ fn main() {
         let decompressed = compressor
             .decompress(&compressed, dominant_dtype, raw_size)
             .unwrap();
-        assert_eq!(
-            raw_data, decompressed,
-            "Roundtrip failed for {}",
-            m.name
-        );
+        assert_eq!(raw_data, decompressed, "Roundtrip failed for {}", m.name);
 
         model_data.push((m.name.to_string(), raw_data, dominant_dtype));
     }
 
-    println!(
-        "  {0:─<22}┴{0:─<11}┴{0:─<12}┴{0:─<9}┴{0:─<8}┴{0:─<10}",
-        ""
-    );
+    println!("  {0:─<22}┴{0:─<11}┴{0:─<12}┴{0:─<9}┴{0:─<8}┴{0:─<10}", "");
     println!();
 
     // ─────────────────────────────────────────────────────────
@@ -214,9 +190,17 @@ fn main() {
     // ─────────────────────────────────────────────────────────
     if let Some((name, weights, dtype)) = model_data.first() {
         println!(
-            "  {} Delta Compression — {} (simulated fine-tuning)",
+            "  {} Delta Compression — {} (0.5% weight perturbation per step)",
             style("▶").cyan().bold(),
             name,
+        );
+        println!(
+            "  {} Simulated fine-tuning: random low-bit perturbations matching",
+            style(" ").dim()
+        );
+        println!(
+            "  {} real gradient update magnitudes (~0.5% of parameters change per step)",
+            style(" ").dim()
         );
         println!();
 
@@ -235,10 +219,7 @@ fn main() {
         );
         println!();
 
-        println!(
-            "  {0:─<7}┬{0:─<12}┬{0:─<12}┬{0:─<9}┬{0:─<10}",
-            ""
-        );
+        println!("  {0:─<7}┬{0:─<12}┬{0:─<12}┬{0:─<9}┬{0:─<10}", "");
         println!(
             "  {:>7}│{:>12}│{:>12}│{:>9}│{:>10}",
             style("Step").bold(),
@@ -247,10 +228,7 @@ fn main() {
             style("Ratio").bold(),
             style("Changed").bold(),
         );
-        println!(
-            "  {0:─<7}┼{0:─<12}┼{0:─<12}┼{0:─<9}┼{0:─<10}",
-            ""
-        );
+        println!("  {0:─<7}┼{0:─<12}┼{0:─<12}┼{0:─<9}┼{0:─<10}", "");
 
         let mut delta = DeltaCompressor::new(CompressionConfig::default());
         let mut current_weights = weights.clone();
@@ -287,9 +265,7 @@ fn main() {
                     .bold()
                     .to_string()
             } else if stats.ratio > 5.0 {
-                style(format!("{:>6.1}x", stats.ratio))
-                    .green()
-                    .to_string()
+                style(format!("{:>6.1}x", stats.ratio)).green().to_string()
             } else {
                 format!("{:>6.1}x", stats.ratio)
             };
@@ -315,10 +291,7 @@ fn main() {
             );
         }
 
-        println!(
-            "  {0:─<7}┼{0:─<12}┼{0:─<12}┼{0:─<9}┼{0:─<10}",
-            ""
-        );
+        println!("  {0:─<7}┼{0:─<12}┼{0:─<12}┼{0:─<9}┼{0:─<10}", "");
 
         let overall_ratio = total_raw as f64 / total_compressed as f64;
         println!(
@@ -335,8 +308,12 @@ fn main() {
             style("✓").green().bold()
         );
         println!(
-            "  {} These are REAL model weights, not synthetic data",
+            "  {} Real model weights with simulated weight perturbation",
             style("✓").green().bold()
+        );
+        println!(
+            "  {} (not actual training — perturbations match real gradient magnitudes)",
+            style(" ").dim()
         );
     }
 
@@ -415,13 +392,7 @@ mod tests {
             return;
         }
         let mut reader = SafetensorsReader::open(&path).unwrap();
-        let dtype = reader
-            .header()
-            .tensors
-            .values()
-            .next()
-            .unwrap()
-            .dtype;
+        let dtype = reader.header().tensors.values().next().unwrap().dtype;
         let data = reader.read_all_data().unwrap();
 
         let compressor = CheckpointCompressor::new(CompressionConfig::default());
@@ -443,18 +414,14 @@ mod tests {
             return;
         }
         let mut reader = SafetensorsReader::open(&path).unwrap();
-        let dtype = reader
-            .header()
-            .tensors
-            .values()
-            .next()
-            .unwrap()
-            .dtype;
+        let dtype = reader.header().tensors.values().next().unwrap().dtype;
         let data = reader.read_all_data().unwrap();
 
         let compressor = CheckpointCompressor::new(CompressionConfig::default());
         let compressed = compressor.compress(&data, dtype).unwrap();
-        let decompressed = compressor.decompress(&compressed, dtype, data.len()).unwrap();
+        let decompressed = compressor
+            .decompress(&compressed, dtype, data.len())
+            .unwrap();
 
         assert_eq!(data, decompressed, "Real weights roundtrip must be exact");
     }

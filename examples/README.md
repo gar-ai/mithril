@@ -68,7 +68,11 @@ python examples/training_demo.py --model distilgpt2 --steps 5 --lr 1e-4
 
 Compresses actual HuggingFace model weights (safetensors format) — GTE-Small,
 DINOv2-Small, MiniLM, BGE-Small-EN — demonstrating Mithril compression on
-production model architectures. No synthetic data.
+production model architectures. Real weights, not synthetic data.
+
+Delta compression uses simulated weight perturbation (0.5% of parameters
+changed per step via low-bit flips) matching real gradient update magnitudes.
+This is not actual training — it demonstrates realistic compression ratios.
 
 ### Run
 
@@ -79,7 +83,8 @@ cargo run --release --example real_checkpoint_demo
 ### Expected Output
 
 - Standalone compression: 1.2-2.2x on real Float16/Float32 weights
-- Delta compression (simulated 0.5% fine-tuning): **141-142x** between steps
+- Delta compression (simulated 0.5% weight perturbation): **141-142x** between steps
+- Float16 compresses faster than Float32 (byte grouping on 2-byte vs 4-byte values)
 - All roundtrips byte-exact on real model weights
 
 ### Tests

@@ -27,7 +27,6 @@
 
 use mithril_core::hashing::hash_with_seed;
 use rayon::prelude::*;
-use std::collections::HashMap;
 
 /// Hash bytes using xxhash3 with seed 0.
 #[inline]
@@ -274,12 +273,32 @@ pub struct DeltaStats {
 pub struct DeltaCompressor {
     config: CompressionConfig,
     compressor: CheckpointCompressor,
-    /// Reference store: maps checkpoint key to signature.
-    references: HashMap<String, CheckpointSignature>,
+    /// Reference store: ordered list of (key, signature) pairs.
+    /// Linear search is faster than HashMap for small collections (max_references <= ~10).
+    references: Vec<(String, CheckpointSignature)>,
     /// Most recent checkpoint key for automatic delta chaining.
     latest_key: Option<String>,
     /// Maximum number of references to keep (for memory management).
     max_references: usize,
+}
+
+/// Evict the oldest non-latest reference when at capacity.
+///
+/// This is called rarely (only when the reference store is full and a new
+/// non-duplicate key is being inserted), so it's marked cold to keep the
+/// hot `store_reference` path compact in the instruction cache.
+#[cold]
+#[inline(never)]
+fn evict_oldest_reference(
+    references: &mut Vec<(String, CheckpointSignature)>,
+    latest_key: &Option<String>,
+) {
+    if let Some(pos) = references
+        .iter()
+        .position(|(k, _)| Some(k) != latest_key.as_ref())
+    {
+        references.remove(pos);
+    }
 }
 
 impl DeltaCompressor {
@@ -289,9 +308,9 @@ impl DeltaCompressor {
         Self {
             compressor: CheckpointCompressor::new(config.clone()),
             config,
-            references: HashMap::new(),
+            references: Vec::new(),
             latest_key: None,
-            max_references: 10,
+            max_references: 2,
         }
     }
 
@@ -336,17 +355,17 @@ impl DeltaCompressor {
         let reference = self
             .latest_key
             .as_ref()
-            .and_then(|k| self.references.get(k));
+            .and_then(|k| self.find_reference(k));
 
         let (compressed, stats) = if let Some(ref_sig) = reference {
             // Check if sizes match (required for delta encoding)
             if ref_sig.size == data.len() {
-                let compressed =
-                    self.compressor
-                        .compress_with_delta(data, dtype, Some(ref_sig.data()))?;
-
+                // Compute delta once, then reuse for sparsity and compression
                 let delta = DeltaEncoder::encode(data, Some(ref_sig.data()));
                 let sparsity = DeltaEncoder::sparsity(&delta);
+
+                // Compress the pre-computed delta (byte group + zstd only, no redundant XOR)
+                let compressed = self.compressor.compress(&delta, dtype)?;
 
                 let stats = DeltaStats {
                     original_size: data.len(),
@@ -383,16 +402,16 @@ impl DeltaCompressor {
         reference_key: &str,
         dtype: DType,
     ) -> Result<(Vec<u8>, DeltaStats)> {
-        let reference = self.references.get(reference_key);
+        let reference = self.find_reference(reference_key);
 
         let (compressed, stats) = if let Some(ref_sig) = reference {
             if ref_sig.size == data.len() {
-                let compressed =
-                    self.compressor
-                        .compress_with_delta(data, dtype, Some(ref_sig.data()))?;
-
+                // Compute delta once, then reuse for sparsity and compression
                 let delta = DeltaEncoder::encode(data, Some(ref_sig.data()));
                 let sparsity = DeltaEncoder::sparsity(&delta);
+
+                // Compress the pre-computed delta (byte group + zstd only, no redundant XOR)
+                let compressed = self.compressor.compress(&delta, dtype)?;
 
                 let stats = DeltaStats {
                     original_size: data.len(),
@@ -431,7 +450,7 @@ impl DeltaCompressor {
         reference_key: Option<&str>,
         dtype: DType,
     ) -> Result<Vec<u8>> {
-        let reference = reference_key.and_then(|k| self.references.get(k));
+        let reference = reference_key.and_then(|k| self.find_reference(k));
 
         self.compressor.decompress_with_delta(
             data,
@@ -441,37 +460,44 @@ impl DeltaCompressor {
         )
     }
 
+    /// Find a reference by key (linear search over Vec of tuples).
+    fn find_reference(&self, key: &str) -> Option<&CheckpointSignature> {
+        self.references
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v)
+    }
+
     /// Store a reference checkpoint for future delta encoding.
     pub fn store_reference(&mut self, key: &str, data: &[u8]) {
-        // Evict if at capacity (unless we're updating an existing key)
-        if self.references.len() >= self.max_references && !self.references.contains_key(key) {
-            // Find a key to evict that isn't the latest
-            let key_to_evict = self
-                .references
-                .keys()
-                .find(|k| Some(*k) != self.latest_key.as_ref())
-                .cloned();
+        let has_key = self.references.iter().any(|(k, _)| k == key);
 
-            if let Some(evict_key) = key_to_evict {
-                self.references.remove(&evict_key);
-            }
+        // Evict if at capacity (unless we're updating an existing key)
+        if self.references.len() >= self.max_references && !has_key {
+            evict_oldest_reference(&mut self.references, &self.latest_key);
         }
 
         let signature = CheckpointSignature::from_data(data);
-        self.references.insert(key.to_string(), signature);
+
+        // Update existing or insert new
+        if let Some(entry) = self.references.iter_mut().find(|(k, _)| k == key) {
+            entry.1 = signature;
+        } else {
+            self.references.push((key.to_string(), signature));
+        }
         self.latest_key = Some(key.to_string());
     }
 
     /// Get a stored reference by key.
     #[must_use]
     pub fn get_reference(&self, key: &str) -> Option<&CheckpointSignature> {
-        self.references.get(key)
+        self.find_reference(key)
     }
 
     /// Check if a reference exists.
     #[must_use]
     pub fn has_reference(&self, key: &str) -> bool {
-        self.references.contains_key(key)
+        self.references.iter().any(|(k, _)| k == key)
     }
 
     /// Get the number of stored references.
@@ -493,6 +519,11 @@ impl DeltaCompressor {
     }
 
     /// Compress without delta encoding.
+    ///
+    /// This is only called on the first checkpoint (before any reference is available)
+    /// or when sizes don't match, so it's a cold path after warmup.
+    #[cold]
+    #[inline(never)]
     fn compress_standalone(&self, data: &[u8], dtype: DType) -> Result<(Vec<u8>, DeltaStats)> {
         let compressed = self.compressor.compress(data, dtype)?;
 
@@ -816,5 +847,50 @@ mod tests {
         // Different data should have different hash
         let sig2 = CheckpointSignature::from_data(&[1, 2, 3, 4, 6]);
         assert_ne!(sig.hash, sig2.hash);
+    }
+
+    #[test]
+    fn test_delta_compress_single_pass_equivalent() {
+        // Verify our single-pass delta produces identical output to the old two-pass approach
+        let mut compressor = DeltaCompressor::default();
+        let data1: Vec<u8> = (0..10000).map(|i| (i % 256) as u8).collect();
+        let (_, _) = compressor.compress_checkpoint("step_1", &data1).unwrap();
+
+        let mut data2 = data1.clone();
+        data2[0] = 255;
+        data2[100] = 255;
+        let (compressed, stats) = compressor.compress_checkpoint("step_2", &data2).unwrap();
+
+        assert!(stats.used_delta);
+        assert!(stats.sparsity > 0.99);
+        assert!(stats.ratio > 5.0);
+
+        // Verify roundtrip still works
+        let decompressed = compressor
+            .decompress_checkpoint(
+                &compressed,
+                data2.len(),
+                stats.reference_key.as_deref(),
+                DType::BFloat16,
+            )
+            .unwrap();
+        assert_eq!(data2, decompressed);
+    }
+
+    #[test]
+    fn test_vec_references_ordering() {
+        let mut compressor = DeltaCompressor::default().with_max_references(3);
+        let data = vec![0u8; 1000];
+
+        compressor.store_reference("a", &data);
+        compressor.store_reference("b", &data);
+        compressor.store_reference("c", &data);
+        assert_eq!(compressor.reference_count(), 3);
+
+        // Adding 4th should evict oldest non-latest
+        compressor.store_reference("d", &data);
+        assert_eq!(compressor.reference_count(), 3);
+        assert!(compressor.has_reference("d"));
+        assert_eq!(compressor.latest_reference(), Some("d"));
     }
 }

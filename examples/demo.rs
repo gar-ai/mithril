@@ -54,10 +54,7 @@ fn main() {
     println!();
 
     // Print table header
-    println!(
-        "  {0:─<5}┼{0:─<20}┼{0:─<20}┼{0:─<9}",
-        ""
-    );
+    println!("  {0:─<5}┼{0:─<20}┼{0:─<20}┼{0:─<9}", "");
     println!(
         "  {:>5}│{:^20}│{:^20}│{:^9}",
         style("Step").bold(),
@@ -65,10 +62,7 @@ fn main() {
         style("Mithril (delta)").bold(),
         style("Savings").bold(),
     );
-    println!(
-        "  {0:─<5}┼{0:─<20}┼{0:─<20}┼{0:─<9}",
-        ""
-    );
+    println!("  {0:─<5}┼{0:─<20}┼{0:─<20}┼{0:─<9}", "");
 
     let mut delta_compressor = DeltaCompressor::new(CompressionConfig::default());
 
@@ -92,11 +86,7 @@ fn main() {
         let decompressed = delta_compressor
             .decompress_checkpoint(&compressed, weights.len(), reference_key, DType::BFloat16)
             .expect("Decompression failed");
-        assert_eq!(
-            weights, decompressed,
-            "Roundtrip failed at step {}",
-            step
-        );
+        assert_eq!(weights, decompressed, "Roundtrip failed at step {}", step);
 
         total_naive += naive_size;
         total_mithril += mithril_size;
@@ -106,11 +96,7 @@ fn main() {
 
         // Format the row
         let naive_col = format!("{:>8}  ({:.1}x)", format_bytes(naive_size), 1.0);
-        let mithril_col = format!(
-            "{:>8} ({:.0}x)",
-            format_bytes(mithril_size),
-            ratio
-        );
+        let mithril_col = format!("{:>8} ({:.0}x)", format_bytes(mithril_size), ratio);
         let savings_col = if savings_pct > 50.0 {
             style(format!("{:>5.1}%", savings_pct)).green().to_string()
         } else {
@@ -122,7 +108,8 @@ fn main() {
             step, naive_col, mithril_col, savings_col,
         );
 
-        // Perturb weights for next step (simulate gradient update: ~0.5% of params change)
+        // Perturb weights for next step (simulated weight perturbation matching
+        // real gradient update magnitudes: ~0.5% of params change per step)
         if step < NUM_STEPS {
             perturb_weights(&mut weights, &mut rng, 0.005);
         }
@@ -131,10 +118,7 @@ fn main() {
     let total_elapsed = total_start.elapsed();
 
     // Print totals
-    println!(
-        "  {0:─<5}┼{0:─<20}┼{0:─<20}┼{0:─<9}",
-        ""
-    );
+    println!("  {0:─<5}┼{0:─<20}┼{0:─<20}┼{0:─<9}", "");
 
     let total_ratio = total_naive as f64 / total_mithril as f64;
     println!(
@@ -233,9 +217,7 @@ fn run_dedup_demo() {
         elapsed.as_secs_f64(),
         ""
     );
-    println!(
-        "  └────────────────────────────────────────────────┘"
-    );
+    println!("  └────────────────────────────────────────────────┘");
 }
 
 /// Generate synthetic bf16 weights that mimic real model weight distributions.

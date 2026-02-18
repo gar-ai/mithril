@@ -2,6 +2,8 @@
 //!
 //! Combines byte grouping and zstd compression for optimal checkpoint compression.
 
+use std::borrow::Cow;
+
 use mithril_core::compression::{Compressor, ZstdCompressor};
 use mithril_core::types::DType;
 use mithril_core::Result;
@@ -110,14 +112,14 @@ impl CheckpointCompressor {
             return self.compressor.compress(data);
         }
 
-        let grouped = if self.config.byte_grouping {
+        let grouped: Cow<[u8]> = if self.config.byte_grouping {
             match dtype {
-                DType::BFloat16 | DType::Float16 => byte_group_bf16_auto(data),
-                DType::Float32 => byte_group_fp32_auto(data),
-                _ => data.to_vec(),
+                DType::BFloat16 | DType::Float16 => Cow::Owned(byte_group_bf16_auto(data)),
+                DType::Float32 => Cow::Owned(byte_group_fp32_auto(data)),
+                _ => Cow::Borrowed(data),
             }
         } else {
-            data.to_vec()
+            Cow::Borrowed(data)
         };
 
         self.compressor.compress(&grouped)
@@ -778,5 +780,46 @@ mod tests {
         // NF4 should achieve better compression than int8
         let ratio = bf16_data.len() as f64 / compressed.len() as f64;
         assert!(ratio > 2.0, "Expected NF4 ratio > 2.0, got {}", ratio);
+    }
+
+    #[test]
+    fn test_int8_compress_no_extra_allocation() {
+        let compressor = CheckpointCompressor::default();
+        // Int8 data - should pass through without byte grouping
+        let data: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();
+
+        let compressed = compressor.compress(&data, DType::Int8).unwrap();
+        let decompressed = compressor
+            .decompress(&compressed, DType::Int8, data.len())
+            .unwrap();
+        assert_eq!(data, decompressed);
+
+        // Also test with byte_grouping disabled
+        let config = CompressionConfig {
+            zstd_level: 3,
+            byte_grouping: false,
+        };
+        let comp2 = CheckpointCompressor::new(config);
+        let compressed2 = comp2.compress(&data, DType::BFloat16).unwrap();
+        let decompressed2 = comp2
+            .decompress(&compressed2, DType::BFloat16, data.len())
+            .unwrap();
+        assert_eq!(data, decompressed2);
+    }
+
+    #[test]
+    fn test_delta_int8_no_extra_allocation() {
+        let compressor = CheckpointCompressor::default();
+        let step1: Vec<u8> = (0..10_000).map(|i| (i % 256) as u8).collect();
+        let mut step2 = step1.clone();
+        step2[0] = 255;
+
+        let compressed = compressor
+            .compress_with_delta(&step2, DType::Int8, Some(&step1))
+            .unwrap();
+        let decompressed = compressor
+            .decompress_with_delta(&compressed, DType::Int8, step2.len(), Some(&step1))
+            .unwrap();
+        assert_eq!(step2, decompressed);
     }
 }

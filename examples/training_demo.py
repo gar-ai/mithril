@@ -2,9 +2,10 @@
 """Mithril Training Demo: Checkpoint compression during fine-tuning.
 
 Fine-tunes distilgpt2 for a few steps and compresses checkpoints
-using Mithril's DeltaCompressor. Shows per-step compression stats
-demonstrating how delta encoding achieves 10-70x compression on
-consecutive training checkpoints.
+using Mithril's DeltaCompressor. Extracts raw tensor bytes from
+state_dicts (avoiding pickle overhead) so that byte grouping and
+delta encoding achieve high compression ratios on consecutive
+training checkpoints.
 
 Prerequisites:
     pip install torch transformers
@@ -45,13 +46,40 @@ def check_dependencies():
         sys.exit(1)
 
 
-def serialize_state_dict(state_dict) -> bytes:
-    """Serialize a PyTorch state_dict to bytes using torch.save."""
-    import torch
+def serialize_state_dict(state_dict) -> tuple[bytes, str]:
+    """Serialize a PyTorch state_dict to raw tensor bytes.
 
-    buffer = io.BytesIO()
-    torch.save(state_dict, buffer)
-    return buffer.getvalue()
+    Returns (bytes, dtype_str) where dtype_str is the dominant dtype.
+    Extracts raw tensor data without pickle overhead for optimal compression.
+    """
+    import torch  # noqa: F401
+
+    buffers = []
+    dtype_counts = {}
+
+    for name, tensor in state_dict.items():
+        # Convert to contiguous CPU tensor and get raw bytes
+        t = tensor.detach().cpu().contiguous()
+        raw = t.numpy().tobytes()
+        buffers.append(raw)
+
+        # Track dtype
+        dt = str(tensor.dtype)
+        dtype_counts[dt] = dtype_counts.get(dt, 0) + tensor.numel()
+
+    # Determine dominant dtype
+    dominant = max(dtype_counts, key=dtype_counts.get)
+    dtype_map = {
+        "torch.float32": "fp32",
+        "torch.float16": "fp16",
+        "torch.bfloat16": "bf16",
+        "torch.int8": "i8",
+        "torch.int32": "i32",
+        "torch.int64": "i64",
+    }
+    dtype_str = dtype_map.get(dominant, "uint8")
+
+    return b"".join(buffers), dtype_str
 
 
 def main():
@@ -126,14 +154,13 @@ def main():
 
         # Serialize state dict
         state_dict = model.state_dict()
-        raw_bytes = serialize_state_dict(state_dict)
+        raw_bytes, dtype_str = serialize_state_dict(state_dict)
         raw_size = len(raw_bytes)
 
         # Compress with Mithril (uses delta from previous step automatically)
-        # Use "uint8" since torch.save produces pickle-formatted bytes, not raw tensors.
-        # Delta encoding still works great — consecutive state_dicts share most bytes.
+        # Raw tensor bytes with proper dtype enable byte grouping for high compression.
         compressed, stats = compressor.compress_checkpoint(
-            f"step_{step}", raw_bytes, "uint8"
+            f"step_{step}", raw_bytes, dtype_str
         )
         compressed_size = len(compressed)
 

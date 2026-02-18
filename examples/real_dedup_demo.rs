@@ -126,10 +126,7 @@ fn main() {
     println!();
 
     // Table header
-    println!(
-        "  {0:─<18}┬{0:─<9}┬{0:─<7}┬{0:─<9}┬{0:─<14}┬{0:─<10}",
-        ""
-    );
+    println!("  {0:─<18}┬{0:─<9}┬{0:─<7}┬{0:─<9}┬{0:─<14}┬{0:─<10}", "");
     println!(
         "  {:>18}│{:>9}│{:>7}│{:>9}│{:>14}│{:>10}",
         style("Dataset").bold(),
@@ -139,10 +136,7 @@ fn main() {
         style("Throughput").bold(),
         style("Time").bold(),
     );
-    println!(
-        "  {0:─<18}┼{0:─<9}┼{0:─<7}┼{0:─<9}┼{0:─<14}┼{0:─<10}",
-        ""
-    );
+    println!("  {0:─<18}┼{0:─<9}┼{0:─<7}┼{0:─<9}┼{0:─<14}┼{0:─<10}", "");
 
     let config = DedupConfig::default(); // threshold = 0.85
     let dedup = Deduplicator::new(config);
@@ -207,10 +201,7 @@ fn main() {
         );
     }
 
-    println!(
-        "  {0:─<18}┼{0:─<9}┼{0:─<7}┼{0:─<9}┼{0:─<14}┼{0:─<10}",
-        ""
-    );
+    println!("  {0:─<18}┼{0:─<9}┼{0:─<7}┼{0:─<9}┼{0:─<14}┼{0:─<10}", "");
 
     let total_elapsed = total_start.elapsed();
     let overall_throughput = total_docs as f64 / total_elapsed.as_secs_f64();
@@ -287,10 +278,7 @@ fn main() {
 
         if !cross_pairs.is_empty() {
             println!();
-            println!(
-                "  {} Cross-dataset overlaps:",
-                style("│").dim()
-            );
+            println!("  {} Cross-dataset overlaps:", style("│").dim());
             let mut pairs_vec: Vec<_> = cross_pairs.into_iter().collect();
             pairs_vec.sort_by(|a, b| b.1.cmp(&a.1));
             for ((ds1, ds2), count) in pairs_vec.iter().take(10) {
@@ -444,7 +432,10 @@ mod tests {
             return; // skip in CI without fixtures
         }
         let texts = load_jsonl_texts(&path, "text");
-        assert!(texts.len() > 100, "Should load at least 100 docs from AG News");
+        assert!(
+            texts.len() > 100,
+            "Should load at least 100 docs from AG News"
+        );
         assert!(!texts[0].is_empty(), "First doc should have text");
     }
 
@@ -478,10 +469,7 @@ mod tests {
 
     #[test]
     fn test_find_dataset() {
-        let boundaries = vec![
-            ("A".to_string(), 0, 100),
-            ("B".to_string(), 100, 200),
-        ];
+        let boundaries = vec![("A".to_string(), 0, 100), ("B".to_string(), 100, 200)];
         assert_eq!(find_dataset(&boundaries, 50), "A");
         assert_eq!(find_dataset(&boundaries, 150), "B");
         assert_eq!(find_dataset(&boundaries, 250), "unknown");
