@@ -124,6 +124,10 @@ path = "examples/demo.rs"
 name = "real_dedup_demo"
 path = "examples/real_dedup_demo.rs"
 
+[[example]]
+name = "real_checkpoint_demo"
+path = "examples/real_checkpoint_demo.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

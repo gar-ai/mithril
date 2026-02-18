@@ -64,6 +64,34 @@ python examples/training_demo.py --model distilgpt2 --steps 5 --lr 1e-4
 
 ---
 
+## Real Model Checkpoint Compression
+
+Compresses actual HuggingFace model weights (safetensors format) — GTE-Small,
+DINOv2-Small, MiniLM, BGE-Small-EN — demonstrating Mithril compression on
+production model architectures. No synthetic data.
+
+### Run
+
+```bash
+cargo run --release --example real_checkpoint_demo
+```
+
+### Expected Output
+
+- Standalone compression: 1.2-2.2x on real Float16/Float32 weights
+- Delta compression (simulated 0.5% fine-tuning): **141-142x** between steps
+- All roundtrips byte-exact on real model weights
+
+### Tests
+
+```bash
+cargo test --example real_checkpoint_demo
+```
+
+Runs 4 tests: safetensors readable, compression >1x, roundtrip exact, delta >10x.
+
+---
+
 ## Real Dataset Dedup Demo
 
 Runs MinHash/LSH deduplication on real HuggingFace datasets (AG News, CC News,
