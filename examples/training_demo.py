@@ -130,8 +130,10 @@ def main():
         raw_size = len(raw_bytes)
 
         # Compress with Mithril (uses delta from previous step automatically)
+        # Use "uint8" since torch.save produces pickle-formatted bytes, not raw tensors.
+        # Delta encoding still works great — consecutive state_dicts share most bytes.
         compressed, stats = compressor.compress_checkpoint(
-            f"step_{step}", raw_bytes, "bf16"
+            f"step_{step}", raw_bytes, "uint8"
         )
         compressed_size = len(compressed)
 
