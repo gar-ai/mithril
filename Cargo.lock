@@ -2374,6 +2374,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "mithril"
+version = "0.1.0"
+dependencies = [
+ "console",
+ "indicatif",
+ "mithril-checkpoint",
+ "mithril-core",
+ "mithril-dedup",
+ "rand 0.8.5",
+ "rayon",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "mithril-cache"
 version = "0.1.0"
 dependencies = [

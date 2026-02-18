@@ -36,7 +36,7 @@
 //! - [`pipeline`] - Main compression pipeline
 //! - [`formats`] - Checkpoint format readers (safetensors, etc.)
 //!
-//! ## Status: IN PROGRESS
+//! ## Status: FUNCTIONAL
 //!
 //! See `STATUS.md` for current progress.
 

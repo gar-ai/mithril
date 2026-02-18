@@ -8,7 +8,7 @@
 //! - Hashing (xxhash, blake3)
 //! - Common types (DType, TensorMeta)
 //!
-//! ## Status: NOT STARTED
+//! ## Status: FUNCTIONAL
 //!
 //! See `STATUS.md` for current progress.
 
